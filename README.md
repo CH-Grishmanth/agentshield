@@ -4,6 +4,8 @@ AgentShield is a production-quality security analysis and compliance mapping too
 
 This project is built for the **Wexa AI take-home assignment: "Build a Graph Database Application"**.
 
+🚀 **Live Deployment URL**: [https://agentshield-gules.vercel.app/](https://agentshield-gules.vercel.app/)
+
 ---
 
 ## 1. Product Overview
