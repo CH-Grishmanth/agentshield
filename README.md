@@ -195,9 +195,9 @@ Scores are mapped to bands: **Low** (0-30), **Medium** (31-60), **High** (61-85)
    ```
 2. Insert the CognoDB connection details:
    ```env
-   COGNODB_URI=bolt+s://db-8c0a8ce7.bravo.databases.cognodb.com
+   COGNODB_URI=bolt+s://your-db-host.cognodb.com
    COGNODB_USERNAME=cognodb
-   COGNODB_PASSWORD=98e70c926b6a9e6f84ac3cd6a49560c8
+   COGNODB_PASSWORD=your-secure-password
    
    # Optional: add OpenAI key to trigger AI risk explanations.
    # If missing, AgentShield will fall back to a rule-based deterministic text explanation engine.
