@@ -7,28 +7,51 @@ logger = logging.getLogger(__name__)
 def generate_risk_explanation(path_nodes: list, policy_details: dict = None, risk_score: int = 0) -> str:
     """
     Generates a natural language explanation of a risky graph access path.
-    Uses OpenAI if OPENAI_API_KEY is configured, otherwise falls back to a 
+    Uses Gemini if GEMINI_API_KEY is configured, falls back to OpenAI if
+    OPENAI_API_KEY is configured, and otherwise falls back to a 
     structured rule-based explanation engine.
     """
+    import httpx
+    
+    path_desc = " -> ".join([f"[{n.get('label')}: {n.get('name')}]" for n in path_nodes])
+    prompt = f"""
+    As a cybersecurity AI agent and security graph architect, explain the risk associated with this access path:
+    Path: {path_desc}
+    Risk Score: {risk_score}/100
+    Governing Policy: {policy_details.get('name') if policy_details else 'None'}
+    Policy Description: {policy_details.get('description') if policy_details else 'None'}
+    
+    Provide a short, professional, and actionable security explanation (2-3 sentences) detailing:
+    1. Why this is dangerous (e.g. indirect access, tool compromise, policy violation).
+    2. The potential impact (e.g. data breach, credentials leak).
+    3. A recommended remediation.
+    Do not write markdown headers, keep it concise.
+    """
+
+    if config.GEMINI_API_KEY:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={config.GEMINI_API_KEY}"
+            payload = {
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }]
+            }
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(url, json=payload)
+                if resp.status_code == 200:
+                    resp_data = resp.json()
+                    explanation = resp_data["candidates"][0]["content"]["parts"][0]["text"]
+                    return explanation.strip()
+                else:
+                    logger.error(f"Gemini API returned error: {resp.status_code} - {resp.text}")
+        except Exception as e:
+            logger.error(f"Failed to generate explanation using Gemini: {e}. Trying OpenAI fallback...")
+
     if config.OPENAI_API_KEY:
         try:
             client = OpenAI(api_key=config.OPENAI_API_KEY)
-            path_desc = " -> ".join([f"[{n.get('label')}: {n.get('name')}]" for n in path_nodes])
-            
-            prompt = f"""
-            As a cybersecurity AI agent and security graph architect, explain the risk associated with this access path:
-            Path: {path_desc}
-            Risk Score: {risk_score}/100
-            Governing Policy: {policy_details.get('name') if policy_details else 'None'}
-            Policy Description: {policy_details.get('description') if policy_details else 'None'}
-            
-            Provide a short, professional, and actionable security explanation (2-3 sentences) detailing:
-            1. Why this is dangerous (e.g. indirect access, tool compromise, policy violation).
-            2. The potential impact (e.g. data breach, credentials leak).
-            3. A recommended remediation.
-            Do not write markdown headers, keep it concise.
-            """
-            
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
